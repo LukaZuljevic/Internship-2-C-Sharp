@@ -1,6 +1,8 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Net.NetworkInformation;
 using System.Net.WebSockets;
+using System.Reflection.Metadata;
 
 namespace InternshipCSharp
 {
@@ -8,7 +10,26 @@ namespace InternshipCSharp
     {
         static void Main(string[] args)
         {
+
+            var users = new Dictionary<int, (Tuple<string, string, DateTime> userInfo, Dictionary<string, double> accounts)>
+            {
+                {1, (Tuple.Create("Marko", "Livaja", new DateTime(1995, 10, 2)), new Dictionary<string, double>
+                    {
+                         { "Tekuci", 100.00 },
+                         { "Ziro", 0.00 },
+                         { "Prepaid", 0.00 }
+                     })
+                 },
+                {2, (Tuple.Create("Ante", "Antic", new DateTime(2003, 10, 6)), new Dictionary<string, double>
+                     {
+                         { "Tekuci", 100.00 },
+                         { "Ziro", 0.00 },
+                         { "Prepaid", 0.00 }
+                     })
+                  }
+            };
             
+
             while (true)
             {
                 Console.WriteLine("1 - Korisnici\n2 - Računi\n3 - Izlaz iz aplikacije");
@@ -17,10 +38,10 @@ namespace InternshipCSharp
                 switch (menuSelection)
                 {
                     case "1":
-                        UsersMenu();
+                        UsersMenu(users);
                         break;
                     case "2":
-                        AccountsMenu();
+                        AccountsMenu(users);
                         break;
                     case "3":
                         return;
@@ -31,7 +52,7 @@ namespace InternshipCSharp
             }
         }
 
-        static void UsersMenu()
+        static void UsersMenu(Dictionary<int, (Tuple<string, string, DateTime> userInfo, Dictionary<string, double> accounts)> users)
         {
             while (true)
             {
@@ -41,7 +62,7 @@ namespace InternshipCSharp
                 switch (usersMenuSelection)
                 {
                     case "1":
-                        NewUserEntry();
+                        NewUserEntry(users);
                         break;
                     case "2":
                         Console.Write("Unesi ID ili ime i prezime korisnika: ");
@@ -75,7 +96,7 @@ namespace InternshipCSharp
             }
         }
 
-        static void AccountsMenu()
+        static void AccountsMenu(Dictionary<int, (Tuple<string, string, DateTime> userInfo, Dictionary<string, double> accounts)> users)
         {
 
             Console.Write("Unesi ime i prezime: ");
@@ -160,8 +181,40 @@ namespace InternshipCSharp
 
         }
 
-        static void NewUserEntry()
+        static void NewUserEntry(Dictionary<int, (Tuple<string, string, DateTime> userInfo, Dictionary<string, double> accounts)> users)
         {
+            Console.Write("Unesi Id: ");
+            var userId = int.Parse(Console.ReadLine());
+
+            Console.Write("Unsi ime: ");
+            string firstName = Console.ReadLine();
+
+            Console.Write("Unesi prezime: ");
+            string lastName = Console.ReadLine();
+
+            Console.Write("Unesi datum rođenja(yyyy-mm-dd): ");
+            DateTime birthDate = DateTime.Parse(Console.ReadLine());
+
+            var userInfo = Tuple.Create(firstName, lastName, birthDate);
+
+            var accounts = new Dictionary<string, double>
+            {
+                  { "Tekuci", 100 },
+                  { "Ziro", 0 },
+                  { "Prepaid", 0 }
+            };
+
+            users[userId] = (userInfo, accounts);
+
+            foreach(var user in users)
+            {
+                Console.WriteLine(user);
+
+                foreach(var account in user.Value.accounts)
+                {
+                    Console.WriteLine(account.Key);
+                }
+            }
 
         }
 
