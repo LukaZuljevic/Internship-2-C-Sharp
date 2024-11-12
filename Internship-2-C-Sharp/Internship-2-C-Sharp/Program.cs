@@ -4,14 +4,15 @@ using System.Net.NetworkInformation;
 using System.Net.WebSockets;
 using System.Reflection.Metadata;
 using System.Collections.Generic;
+using System.Transactions;
 
 Dictionary<int, (Tuple<string, string, DateTime> userInfo, Dictionary<string, double> accounts)> users = new Dictionary<int, (Tuple<string, string, DateTime>, Dictionary<string, double>)>();
 
 users.Add(1, (new Tuple<string, string, DateTime>("Marko", "Livaja", new DateTime(1995, 10, 2)),
     new Dictionary<string, double>
     {
-        { "Tekuci", 100.00 },
-        { "Ziro", 0.00 },
+        { "Tekuci", 222.22 },
+        { "Ziro", 10.1 },
         { "Prepaid", 0.00 }
     }
 ));
@@ -20,17 +21,17 @@ users.Add(2, (new Tuple<string, string, DateTime>("Ante", "Antic", new DateTime(
     new Dictionary<string, double>
     {
         { "Tekuci", 100.00 },
-        { "Ziro", 0.00 },
-        { "Prepaid", 0.00 }
+        { "Ziro", 200 },
+        { "Prepaid", 12 }
     }
 ));
 
-Dictionary<int, (int, double, string, string, string, DateTime)> transactions = new Dictionary<int, (int, double, string, string, string, DateTime)>();
+Dictionary<int, (int, string, double, string, string, string, DateTime)> transactions = new Dictionary<int, (int, string, double, string, string, string, DateTime)>();
 
-transactions.Add(1, (1, 122.22, "Standarna transakcija", "prihod", "honorar", new DateTime(2022, 1, 20)));
-transactions.Add(2, (1, 10.1, "Standarna transakcija", "prihod", "placa", new DateTime(2023, 5, 1)));
-transactions.Add(3, (2, 200, "Standarna transakcija", "prihod", "honorar", new DateTime(2024, 4, 22)));
-transactions.Add(4, (2, 12, "Standarna transakcija", "rashod", "poklon", new DateTime(2020, 3, 25)));
+transactions.Add(1, (1, "Tekuci", 122.22, "Standarna transakcija", "prihod", "honorar", new DateTime(2022, 1, 20)));
+transactions.Add(2, (1, "Ziro", 10.1, "Standarna transakcija", "prihod", "placa", new DateTime(2023, 5, 1)));
+transactions.Add(3, (2, "Ziro", 200, "Standarna transakcija", "prihod", "honorar", new DateTime(2024, 4, 22)));
+transactions.Add(4, (2, "Prepaid", 12, "Standarna transakcija", "rashod", "poklon", new DateTime(2020, 3, 25)));
 
 while (true)
 {
@@ -81,8 +82,9 @@ void UsersMenu()
     }
 }
 
-void AccountsMenu()
+void AccountsMenu() 
 {
+    //stavi ovaj blok koda u funkciju
     Console.Write("Unesi ime i prezime: ");
     var fullName = Console.ReadLine();
 
@@ -108,6 +110,14 @@ void AccountsMenu()
     Console.WriteLine("1 - Tekuci\n2 - Ziro\n3 - Prepaid");
     var accountType = Console.ReadLine();
 
+    accountType = accountType switch
+    {
+        "1" => "Tekuci",
+        "2" => "Ziro",
+        _ => "Prepaid"
+    };
+
+
     while (true)
     {
         Console.WriteLine("1 - Unos nove transakcije\n2 - Brisanje transakcije\n3 - Uređivanje transakcije\n4 - Pregled transakcija\n5 - Financijsko izvješće");
@@ -119,16 +129,7 @@ void AccountsMenu()
                 NewTransaction(accountType, accountUser.Key);
                 break;
             case "2":
-                Console.WriteLine("a) po ID-u\nb) ispod unesenog iznosa\nc) iznad unesenog iznosa\nd) svih prihoda\ne) svih rashoda\nf) svih transakcija za odabranu kategoriju");
-                var deleteType = Console.ReadLine();
-
-                while (deleteType != "a" && deleteType != "b" && deleteType != "c" && deleteType != "d" && deleteType != "e" && deleteType != "f")
-                {
-                    Console.WriteLine("Krivi unos! Unesite jednu od ponuđenih opcija.");
-                    deleteType = Console.ReadLine();
-                }
-
-                DeleteTransaction(deleteType);
+                DeleteTransaction(accountType, accountUser.Key);
                 break;
             case "3":
                 Console.Write("Unesi ID transakcije");
@@ -165,6 +166,20 @@ void AccountsMenu()
                 break;
         }
     }
+}
+
+void PrintTransactions(int accountUser, string accountType)
+{
+    Console.WriteLine();
+    Console.WriteLine($"Transakcije na {accountType} racunu");
+    foreach(var transaction in transactions)
+    {
+        if (transaction.Value.Item1 == accountUser && transaction.Value.Item2 == accountType)
+        {
+            Console.WriteLine(transaction);
+        }
+    }
+    Console.WriteLine();
 }
 
 void PrintUsers()
@@ -414,17 +429,17 @@ void NewTransaction(string accountType, int accountUser)
         transactionAmount = -transactionAmount;
     }
 
-    if (accountType == "1")
+    if (accountType == "Tekuci")
     {
-        users[accountUser].accounts["Tekuci"] += transactionAmount;
+        users[accountUser].accounts[accountType] += transactionAmount;
     }
-    else if (accountType == "2")
+    else if (accountType == "Ziro")
     {
-        users[accountUser].accounts["Ziro"] += transactionAmount;
+        users[accountUser].accounts[accountType] += transactionAmount;
     }
     else
     {
-        users[accountUser].accounts["Prepaid"] += transactionAmount;
+        users[accountUser].accounts[accountType] += transactionAmount;
     }
 
     DateTime transactionTime;
@@ -439,16 +454,110 @@ void NewTransaction(string accountType, int accountUser)
     }
 
     int transactionId = transactions.Count + 1; 
-    transactions.Add(transactionId, (accountUser, transactionAmount, transactionDescription, transactionType, transactionCategory, transactionTime));
+    transactions.Add(transactionId, (accountUser, accountType, transactionAmount, transactionDescription, transactionType, transactionCategory, transactionTime));
 
-    ReviewTransaction(accountUser);
+    PrintTransactions(accountUser, accountType);
 
-    Console.WriteLine($"Stanje racuna\nTekuci: {users[accountUser].accounts["Tekuci"]}\nZiro: {users[accountUser].accounts["Ziro"]}\nPrepaid: {users[accountUser].accounts["Prepaid"]}");
+    Console.WriteLine($"Stanje racuna {accountType}: {users[accountUser].accounts[accountType]}");
 
 }
 
-void DeleteTransaction(string deleteType)
+void DeleteTransaction(string accountType, int accountUser)
 {
+    Console.WriteLine("a) po ID-u\nb) ispod unesenog iznosa\nc) iznad unesenog iznosa\nd) svih prihoda\ne) svih rashoda\nf) svih transakcija za odabranu kategoriju");
+    var deleteType = Console.ReadLine();
+
+    while (deleteType != "a" && deleteType != "b" && deleteType != "c" && deleteType != "d" && deleteType != "e" && deleteType != "f")
+    {
+        Console.WriteLine("Krivi unos! Unesite jednu od ponuđenih opcija.");
+        deleteType = Console.ReadLine();
+    }
+
+    PrintTransactions(accountUser, accountType);
+
+    double transactionAmount;
+
+    switch (deleteType)
+    {
+        case "a":
+            Console.Write("Unesi Id transakcije koju zelis obrisat: ");
+            var userInput = Console.ReadLine();
+
+            bool isId = int.TryParse(userInput, out int transactionId);
+
+            if (isId)
+            {
+                if (transactions.ContainsKey(transactionId))
+                {
+                    transactions.Remove(transactionId);
+                }
+                else
+                {
+                    Console.WriteLine("Ta transakcija ne postoji!");
+                }
+            }
+            break;
+        case "b":
+            Console.Write("Unesi iznos ispod kojeg zelis izbrisati sve transakcije: ");
+            transactionAmount = double.Parse(Console.ReadLine());
+
+            foreach(var transaction in transactions)
+            {
+                if (transaction.Value.Item1 == accountUser && transaction.Value.Item3 < transactionAmount) 
+                {
+                    transactions.Remove(transaction.Key);
+                }
+            }
+            break;
+        case "c":
+            Console.Write("Unesi iznos iznad kojeg zelis izbrisati sve transakcije: ");
+            transactionAmount = double.Parse(Console.ReadLine());
+
+            foreach (var transaction in transactions)
+            {
+                if (transaction.Value.Item1 == accountUser && transaction.Value.Item3 > transactionAmount)
+                {
+                    transactions.Remove(transaction.Key);
+                }
+            }
+            break;
+        case "d":
+            foreach (var transaction in transactions)
+            {
+                if (transaction.Value.Item5 == "prihod")
+                {
+                    transactions.Remove(transaction.Key);
+                }
+            }
+            break;
+        case "e":
+            foreach (var transaction in transactions)
+            {
+                if (transaction.Value.Item5 == "rashod")
+                {
+                    transactions.Remove(transaction.Key);
+                }
+            }
+            break;
+        case "f":
+            Console.Write("Unesi kategoriju za koju zelis izbrisat sve transakcije: ");
+            var transactionCategory = Console.ReadLine();
+
+            foreach (var transaction in transactions)
+            {
+                if (transaction.Value.Item6 == transactionCategory)
+                {
+                    transactions.Remove(transaction.Key);
+                }
+            }
+            break;
+        default:
+            Console.WriteLine("Krivi unos! Unesite jednu od ponuđenih opcija.");
+            break;
+    }
+
+    PrintTransactions(accountUser, accountType);
+
 }
 
 void EditTransaction(string transactionId)
