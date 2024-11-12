@@ -29,9 +29,11 @@ users.Add(2, (new Tuple<string, string, DateTime>("Ante", "Antic", new DateTime(
 Dictionary<int, (int, string, double, string, string, string, DateTime)> transactions = new Dictionary<int, (int, string, double, string, string, string, DateTime)>();
 
 transactions.Add(1, (1, "Tekuci", 122.22, "Standarna transakcija", "prihod", "honorar", new DateTime(2022, 1, 20)));
+transactions.Add(8, (1, "Tekuci", 318, "Standarna transakcija", "rashod", "sport", new DateTime(2022, 1, 22)));
+transactions.Add(9, (1, "Tekuci", 10, "Online transakcija", "rashod", "sport", new DateTime(2001, 12, 23)));
 transactions.Add(2, (1, "Tekuci", 1022.1, "Standarna transakcija", "prihod", "placa", new DateTime(2023, 5, 11)));
-transactions.Add(3, (1, "Tekuci", 120.1, "Online transakcija", "rashod", "sport", new DateTime(2013, 5, 1)));
-transactions.Add(4, (1, "Ziro", 101.13, "Income transakcija", "prihod", "placa", new DateTime(2022, 10, 10)));
+transactions.Add(3, (1, "Tekuci", 120.1, "Online transakcija", "rashod", "hrana", new DateTime(2013, 5, 1)));
+transactions.Add(4, (1, "Ziro", 101.13, "Income transakcija", "rashod", "placa", new DateTime(2022, 10, 10)));
 transactions.Add(5, (1, "Prepaid", 120.1, "Standarna transakcija", "rashod", "hrana", new DateTime(2022, 11, 11)));
 transactions.Add(6, (2, "Ziro", 200, "Standarna transakcija", "prihod", "honorar", new DateTime(2024, 4, 22)));
 transactions.Add(7, (2, "Prepaid", 12, "Standarna transakcija", "rashod", "poklon", new DateTime(2020, 3, 25)));
@@ -159,16 +161,7 @@ void AccountsMenu()
                 break;
 
             case "5":
-                Console.WriteLine("a) trenutno stanje računa\nb) broj ukupnih transakcija\nc) ukupan iznos prihoda i rashoda za odabrani mjesec i godinu\nd) postotak udjela rashoda za odabranu kategoriju\ne) prosječni iznos transakcije za odabrani mjesec i godinu\nf) prosječni iznos transakcije za odabranu kategoriju");
-                var financialReportType = Console.ReadLine();
-
-                while (financialReportType != "a" && financialReportType != "b" && financialReportType != "c" && financialReportType != "d" && financialReportType != "e" && financialReportType != "f")
-                {
-                    Console.WriteLine("Krivi unos! Unesite jednu od ponuđenih opcija.");
-                    financialReportType = Console.ReadLine();
-                }
-                
-                FinancialReport(financialReportType);
+                FinancialReport(accountType, accountUser.Key);
                 break;
 
             case "6":
@@ -478,6 +471,11 @@ void NewTransaction(string accountType, int accountUser)
     else
     {
         transactionTime = DateTime.Today;
+    }
+
+    if (transactionType == "rashod")
+    {
+        transactionAmount = -transactionAmount;
     }
 
     int transactionId = transactions.Count + 1; 
@@ -835,7 +833,230 @@ void ReviewTransaction(string accountType, int accountUser)
     }
 }
 
-void FinancialReport(string financialReport)
+void FinancialReport(string accountType, int accountUser)
 {
+    Console.Clear();
+
+    Console.WriteLine("a) trenutno stanje računa\nb) broj ukupnih transakcija\nc) ukupan iznos prihoda i rashoda za odabrani mjesec i godinu\nd) postotak udjela rashoda za odabranu kategoriju\ne) prosječni iznos transakcije za odabrani mjesec i godinu\nf) prosječni iznos transakcije za odabranu kategoriju");
+    var financialReportType = Console.ReadLine();
+
+    while (financialReportType != "a" && financialReportType != "b" && financialReportType != "c" && financialReportType != "d" && financialReportType != "e" && financialReportType != "f")
+    {
+        Console.WriteLine("Krivi unos! Unesite jednu od ponuđenih opcija.");
+        financialReportType = Console.ReadLine();
+    }
+
+    switch (financialReportType)
+    {
+        case "a":
+            var accountState = AccountState(accountType, accountUser);
+
+            if(accountState < 0)
+            {
+                Console.WriteLine("Upozorenje! Racun vam je u minusu.");
+            }
+
+            Console.WriteLine($"Stanje racuna {accountType}: {accountState}");
+            break;
+
+        case "b":
+            var amountOfTransactions = TransactionsAmount(accountType, accountUser);
+
+            Console.WriteLine($"Broj transakcija ovog racuna: {amountOfTransactions}");
+            break;
+
+        case "c":
+            AccountIncomeExpense(accountType, accountUser);
+            break;
+
+        case "d":
+            CategoryExpensePercentage(accountType, accountUser);
+            break;
+
+        case "e":
+            AverageAmountForDate(accountType, accountUser);
+            break;
+
+        case "f":
+            AverageAmountForCategory(accountType, accountUser);
+            break;
+
+        default:
+            Console.WriteLine("Krivi unos! Unesite jednu od ponuđenih opcija.");
+            break;
+    }
 }
 
+double AccountState(string accountType, int accountUser)
+{
+    double amount = 0;
+
+    foreach(var transaction in transactions)
+    {
+        if(transaction.Value.Item1 == accountUser && transaction.Value.Item2 == accountType)
+        {
+            amount += transaction.Value.Item5 == "prihod" ? transaction.Value.Item3 : -transaction.Value.Item3;
+        }
+    }
+
+    return amount;
+}
+
+int TransactionsAmount(string accountType, int accountUser)
+{
+    int amount = 0;
+
+    foreach (var transaction in transactions)
+    {
+        if (transaction.Value.Item1 == accountUser && transaction.Value.Item2 == accountType)
+        {
+            amount++;
+        }
+    }
+
+    return amount;
+}
+
+void AccountIncomeExpense(string accountType, int accountUser)
+{
+    var year = EnterYear();
+    var month = EnterMonth();
+
+    double income = 0;
+    double expense = 0;
+
+    foreach(var transaction in transactions)
+    {
+        if(transaction.Value.Item1 == accountUser && transaction.Value.Item2 == accountType && year == transaction.Value.Item7.Year && month == transaction.Value.Item7.Month)
+        {
+            if (transaction.Value.Item5 == "prihod")
+            {
+                income += transaction.Value.Item3;
+            }
+            else
+            {
+                expense += transaction.Value.Item3;
+            }
+        }
+    }
+
+    Console.WriteLine($"Prihodi: {income}");
+    Console.WriteLine($"Rashodi: {expense}");
+}
+
+void CategoryExpensePercentage(string accountType, int accountUser)
+{
+    Console.Write("Unesi kategoriju(hrana, prijevoz, sport): ");
+    var tranCategory = Console.ReadLine();
+
+    while(tranCategory != "hrana" && tranCategory != "prijevoz" && tranCategory != "sport")
+    {
+        Console.WriteLine("Unesi postojecu kategoriju!");
+        Console.Write("Unesi kategoriju(hrana, prijevoz, sport): ");
+        tranCategory = Console.ReadLine();
+    }
+
+    double fullExpense = 0;
+    double categoryExpense = 0;
+
+    foreach (var transaction in transactions)
+    {
+        if (transaction.Value.Item1 == accountUser && transaction.Value.Item2 == accountType)
+        {
+            if (transaction.Value.Item5 == "rashod")
+            {
+                fullExpense += transaction.Value.Item3;
+            }
+
+            if(transaction.Value.Item5 == "rashod" && transaction.Value.Item6 == tranCategory)
+            {
+                categoryExpense += transaction.Value.Item3;
+            }
+        
+        }
+    }
+    Console.WriteLine($"Postotak rashoda kategorije {tranCategory}: {(categoryExpense / fullExpense)}");
+}
+
+void AverageAmountForDate(string accountType, int accountUser)
+{
+    var year = EnterYear();
+    var month = EnterMonth();
+
+    double totalAmount = 0;
+    int numberOfTransactions = 0;
+
+    foreach (var transaction in transactions)
+    {
+        if (transaction.Value.Item1 == accountUser && transaction.Value.Item2 == accountType && year == transaction.Value.Item7.Year && month == transaction.Value.Item7.Month)
+        {
+            totalAmount += transaction.Value.Item3;
+            numberOfTransactions++;
+        }
+    }
+
+    Console.WriteLine($"Prosjecni iznos transakcije za to razdoblje: {totalAmount/numberOfTransactions}");
+}
+
+void AverageAmountForCategory(string accountType, int accountUser)
+{
+    Console.Write("Unesi kategoriju(hrana, prijevoz, sport, placa, honorar, poklon): ");
+    var tranCategory = Console.ReadLine();
+
+    while (tranCategory != "hrana" && tranCategory != "prijevoz" && tranCategory != "sport" && tranCategory != "placa" && tranCategory != "honorar" && tranCategory != "poklon")
+    {
+        Console.WriteLine("Unesi postojecu kategoriju!");
+        Console.Write("Unesi kategoriju(hrana, prijevoz, sport, placa, honorar, poklon): ");
+        tranCategory = Console.ReadLine();
+    }
+
+    double totalAmount = 0;
+    var numberOfTransactions = 0;
+    foreach (var transaction in transactions)
+    {
+        if (transaction.Value.Item1 == accountUser && transaction.Value.Item2 == accountType && transaction.Value.Item6 == tranCategory)
+        {
+            totalAmount += transaction.Value.Item3;
+            numberOfTransactions++;
+        }
+    }
+
+    double result = totalAmount / numberOfTransactions;
+
+    if (double.IsNaN(result))
+    {
+        result = 0;
+    }
+
+    Console.WriteLine($"Prosjecni iznos transakcije za tu kategoriju: {result}");
+}
+
+int EnterYear()
+{
+    Console.Write("Unesi godinu: ");
+    var year = int.Parse(Console.ReadLine());
+
+    if (year > 2024)
+    {
+        Console.WriteLine("Unili ste ne postojecu godinu! ");
+        Console.Write("Unesi godinu: ");
+        year = int.Parse(Console.ReadLine());
+    }
+
+    return year;
+}
+
+int EnterMonth()
+{
+    Console.Write("Unesi mjesec: ");
+    var month = int.Parse(Console.ReadLine());
+
+    if (month < 1 || month > 12)
+    {
+        Console.WriteLine("Unesi postojeci mjesec(1-12)!");
+        Console.Write("Unesi mjesec: ");
+        month = int.Parse(Console.ReadLine());
+    }
+
+    return month;
+}
