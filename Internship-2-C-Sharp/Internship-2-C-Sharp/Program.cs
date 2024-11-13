@@ -148,7 +148,7 @@ void AccountsMenu()
 
     while (true)
     {
-        Console.WriteLine("1 - Unos nove transakcije\n2 - Brisanje transakcije\n3 - Uređivanje transakcije\n4 - Pregled transakcija\n5 - Financijsko izvješće\n6 - Povratak na main menu");
+        Console.WriteLine("1 - Unos nove transakcije\n2 - Brisanje transakcije\n3 - Uređivanje transakcije\n4 - Pregled transakcija\n5 - Financijsko izvješće\n6 - Prebacivanje novaca izmedu racuna\n7 - Povratak na main menu");
         var usersMenuSelection = Console.ReadLine();
 
         switch (usersMenuSelection)
@@ -174,6 +174,10 @@ void AccountsMenu()
                 break;
 
             case "6":
+                TransferFunds(accountUser.Key);
+                break;
+
+            case "7":
                 return;
 
             default:
@@ -1141,6 +1145,36 @@ int EnterMonth()
     return month;
 }
 
+string VerifyCorrectAccountInput(string account)
+{
+    while(account != "Tekuci" && account != "Ziro" && account != "Prepaid")
+    {
+        Console.Write("Unesi jednu od ponudenih opcija(Tekuci, Ziro, Prepaid): ");
+        account = Console.ReadLine();
+    }
+
+    return account;
+}
+
+double VerifyCorrectAmountInput(double amountMoney, double accountBalance)
+{
+    while (amountMoney > accountBalance)
+    {
+        Console.WriteLine("Nemas toliku svotu novca na racunu!");
+        Console.Write("Unesi svotu ponovno: ");
+        amountMoney = double.Parse(Console.ReadLine());
+    }
+
+    while (amountMoney < 0)
+    {
+        Console.WriteLine("Unesi pozitivnu vrijednost!");
+        Console.Write("Unesi svotu ponovno: ");
+        amountMoney = double.Parse(Console.ReadLine());
+    }
+
+    return amountMoney;
+}
+
 bool VerifyTransDeletion()
 {
     Console.Write("Jeste li sigurni da zelite obrisat transakciju?(da ili ne)");
@@ -1157,4 +1191,43 @@ bool VerifyTransDeletion()
         return true;
     }
     return false; 
+}
+
+void TransferFunds(int accountUser)
+{
+    Console.Write("Unesi SA kojeg racuna zelis prebacit pare(Tekuci, Ziro, Prepaid): ");
+    var sourceAccount = Console.ReadLine();
+
+    sourceAccount = VerifyCorrectAccountInput(sourceAccount);
+
+    users[accountUser].accounts.TryGetValue(sourceAccount, out double accountBalance);
+
+    if (accountBalance < 0)
+    {
+        Console.WriteLine("Racun vam je u minusu, ne mozete prebacivat novac!");
+        return;
+    }
+
+    Console.Write("Unesi NA koji racun zelis prebacit pare(Tekuci, Ziro, Prepaid): ");
+    var targetAccount = Console.ReadLine();
+
+    targetAccount = VerifyCorrectAccountInput(targetAccount);
+
+    Console.Write("Odaberi kolicinu novca za prebacivanje: ");
+    var amountMoney = double.Parse(Console.ReadLine());
+
+    amountMoney = VerifyCorrectAmountInput(amountMoney, accountBalance);
+
+    Console.WriteLine("Uspjesno obavljen transfer novca! ");
+
+    int transactionId = transactions.Keys.Count > 0 ? transactions.Keys.Max() + 1 : 1;
+    transactions.Add(transactionId, (accountUser, sourceAccount, amountMoney, "Interni transfer", "rashod", "transfer", DateTime.Now));
+    transactionId = transactions.Keys.Count > 0 ? transactions.Keys.Max() + 1 : 1;
+    transactions.Add(transactionId, (accountUser, targetAccount, amountMoney, "Interni transfer", "prihod", "transfer", DateTime.Now));
+
+    users[accountUser].accounts[sourceAccount] -= amountMoney;
+    users[accountUser].accounts[targetAccount] += amountMoney;
+
+    Console.WriteLine($"Stanje {sourceAccount}: {AccountState(sourceAccount, accountUser)}");
+    Console.WriteLine($"Stanje {targetAccount}: {AccountState(targetAccount, accountUser)}");
 }
